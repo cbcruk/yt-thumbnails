@@ -1,20 +1,38 @@
 {
   "name": "yt-thumbnails",
   "version": "1.0.0",
-  "description": "YouTube video thumbnail grid generator",
-  "main": "src/index.ts",
+  "description": "YouTube video thumbnail grid generator - Extract frames and create beautiful grid images from YouTube videos",
+  "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "yt-thumbnails": "src/index.ts"
+    "yt-thumbnails": "dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --compile --outfile dist/yt-thumbnails",
+    "build": "bun build src/index.ts --outfile dist/index.js --target node --external sharp",
+    "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [],
+  "keywords": [
+    "youtube",
+    "thumbnail",
+    "video",
+    "grid",
+    "ffmpeg",
+    "cli"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ieunsu/yt-thumbnails.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "sharp": "^0.34.5"
   },

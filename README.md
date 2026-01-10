@@ -4,7 +4,7 @@ YouTube video thumbnail grid generator. Extract frames from YouTube videos and c
 
 ## Requirements
 
-- [Bun](https://bun.sh)
+- [Node.js](https://nodejs.org) >= 18 (or [Bun](https://bun.sh))
 - [ffmpeg](https://ffmpeg.org)
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp)
 
@@ -16,24 +16,13 @@ brew install ffmpeg yt-dlp
 ## Installation
 
 ```bash
-git clone <repo-url>
-cd yt-thumbnails
-bun install
+npm install -g yt-thumbnails
 ```
 
 ## Usage
 
-### Development
-
 ```bash
-bun start "<youtube-url>"
-```
-
-### Build
-
-```bash
-bun run build
-./dist/yt-thumbnails "<youtube-url>"
+yt-thumbnails "<youtube-url>"
 ```
 
 ## Options
@@ -75,3 +64,7 @@ Extracts frames at equal time intervals throughout the video.
 Detects scene changes and extracts frames at transition points. Better for videos with distinct scenes like music videos or trailers.
 
 If no scene changes are detected, falls back to uniform mode automatically.
+
+## License
+
+MIT
