@@ -1,6 +1,6 @@
 {
   "name": "yt-thumbnails",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YouTube video thumbnail grid generator - Extract frames and create beautiful grid images from YouTube videos",
   "main": "dist/index.js",
   "type": "module",
