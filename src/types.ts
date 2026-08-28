@@ -19,3 +19,16 @@ export interface SceneFrame {
   /** Scene change score (0-1) */
   score: number
 }
+
+/** Receives human-readable progress messages */
+export type Reporter = (message: string) => void
+
+/** Output handling for a spawned command */
+export interface RunOptions {
+  /** Collect stdout and return it instead of forwarding to the parent */
+  capture?: boolean
+  /** Receive stdout and stderr chunks as they arrive */
+  onOutput?: (chunk: string) => void
+  /** Discard all output */
+  silent?: boolean
+}
