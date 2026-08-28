@@ -1,0 +1,267 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>yt-thumbnails</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --field: #ffffff;
+    --accent: #2563eb;
+    --accent-fg: #ffffff;
+    --log-bg: #f6f7f9;
+    --danger: #b91c1c;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16181d;
+      --fg: #e8eaed;
+      --muted: #9aa1ab;
+      --line: #2c3038;
+      --field: #1e2127;
+      --accent: #3b82f6;
+      --accent-fg: #ffffff;
+      --log-bg: #12141a;
+      --danger: #f87171;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 24px;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
+      sans-serif;
+  }
+
+  h1 {
+    margin: 0 0 20px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  input[type='text'],
+  input[type='number'],
+  select {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--field);
+    color: var(--fg);
+    font: inherit;
+  }
+
+  input:focus-visible,
+  select:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  button {
+    padding: 10px 18px;
+    border: 0;
+    border-radius: 7px;
+    background: var(--accent);
+    color: var(--accent-fg);
+    font: inherit;
+    font-weight: 550;
+    cursor: pointer;
+  }
+
+  button.secondary {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    align-items: center;
+  }
+
+  #status {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  #status.error {
+    color: var(--danger);
+  }
+
+  #log {
+    margin-top: 16px;
+    padding: 12px;
+    max-height: 180px;
+    overflow: auto;
+    border-radius: 7px;
+    background: var(--log-bg);
+    color: var(--muted);
+    font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  #log:empty {
+    display: none;
+  }
+
+  #result {
+    margin-top: 20px;
+  }
+
+  #result:not([hidden]) {
+    display: block;
+  }
+
+  #result img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+  }
+
+  #path {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 11px;
+    word-break: break-all;
+  }
+</style>
+
+<h1>YouTube 썸네일 그리드</h1>
+
+<form id="form">
+  <label for="url">영상 URL</label>
+  <input
+    id="url"
+    type="text"
+    placeholder="https://youtube.com/watch?v=..."
+    required
+  />
+
+  <div class="row">
+    <div>
+      <label for="grid">그리드</label>
+      <select id="grid">
+        <option>3</option>
+        <option selected>4</option>
+        <option>5</option>
+        <option>6</option>
+      </select>
+    </div>
+    <div>
+      <label for="mode">모드</label>
+      <select id="mode">
+        <option value="uniform" selected>균등 간격</option>
+        <option value="scene">장면 감지</option>
+      </select>
+    </div>
+    <div>
+      <label for="threshold">threshold</label>
+      <input id="threshold" type="number" min="0" max="1" step="0.05" value="0.4" />
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="submit" type="submit">생성</button>
+    <button id="revealBtn" class="secondary" type="button" hidden>
+      폴더 열기
+    </button>
+    <span id="status"></span>
+  </div>
+</form>
+
+<div id="log"></div>
+
+<div id="result" hidden>
+  <img id="image" alt="생성된 썸네일 그리드" />
+  <div id="path"></div>
+</div>
+
+<script type="module">
+  const form = document.getElementById('form')
+  const submit = document.getElementById('submit')
+  const revealBtn = document.getElementById('revealBtn')
+  const status = document.getElementById('status')
+  const log = document.getElementById('log')
+  const result = document.getElementById('result')
+  const image = document.getElementById('image')
+  const path = document.getElementById('path')
+
+  window.__onProgress = (chunk) => {
+    log.textContent += chunk
+    log.scrollTop = log.scrollHeight
+  }
+
+  const setBusy = (busy) => {
+    submit.disabled = busy
+    submit.textContent = busy ? '생성 중…' : '생성'
+  }
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault()
+
+    log.textContent = ''
+    status.textContent = ''
+    status.classList.remove('error')
+    result.hidden = true
+    revealBtn.hidden = true
+    setBusy(true)
+
+    try {
+      const output = await window.__generate({
+        url: document.getElementById('url').value.trim(),
+        grid: Number(document.getElementById('grid').value),
+        mode: document.getElementById('mode').value,
+        threshold: Number(document.getElementById('threshold').value),
+      })
+
+      image.src = `/result.jpg?t=${Date.now()}`
+      path.textContent = output
+      result.hidden = false
+      revealBtn.hidden = false
+      status.textContent = '완료'
+    } catch (error) {
+      status.textContent = error.message
+      status.classList.add('error')
+    } finally {
+      setBusy(false)
+    }
+  })
+
+  revealBtn.addEventListener('click', () => window.__reveal())
+</script>

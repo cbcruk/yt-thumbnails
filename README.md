@@ -25,6 +25,28 @@ npm install -g yt-thumbnails
 yt-thumbnails "<youtube-url>"
 ```
 
+## GUI
+
+A desktop front end built with [barlo](https://github.com/cbcruk/barlo), which
+runs the page in the Chrome already installed on the machine. It shares the
+extraction pipeline with the CLI, streams progress into the window, and writes
+the grid to your Downloads folder.
+
+Requires [Bun](https://bun.sh) and Chrome, Chromium, Edge, or Brave — it is not
+part of the npm package.
+
+```bash
+bun install
+bun run gui
+```
+
+Build a standalone binary (~61 MB, no runtime dependencies beyond the browser):
+
+```bash
+bun run gui:build
+./build/yt-thumbnails-gui
+```
+
 ## Options
 
 | Option            | Short | Description                     | Default             |

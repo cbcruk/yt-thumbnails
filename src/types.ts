@@ -32,3 +32,17 @@ export interface RunOptions {
   /** Discard all output */
   silent?: boolean
 }
+
+/** Resolved settings for one grid generation */
+export interface GenerateOptions {
+  /** Video URL */
+  url: string
+  /** Grid size (e.g., 4 for 4x4) */
+  grid: number
+  /** Frame extraction mode */
+  mode: 'uniform' | 'scene'
+  /** Scene detection threshold (0-1) */
+  threshold: number
+  /** Output file path */
+  output: string
+}
