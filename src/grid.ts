@@ -2,21 +2,23 @@ import { readdirSync } from 'fs'
 import { join } from 'path'
 import type { Reporter } from './types'
 import { run } from './run'
-import { TEMP_DIR, THUMB_SIZE } from './constants'
+import { THUMB_SIZE } from './constants'
 
 /**
  * Creates a thumbnail grid from extracted frames
+ * @param workspace - Directory holding the extracted frames
  * @param grid - Grid size (e.g., 4 for 4x4)
  * @param outputName - Output file path
  * @param report - Receives progress messages
  * @returns Output file path
  */
 export async function createGrid(
+  workspace: string,
   grid: number,
   outputName: string,
   report: Reporter
 ): Promise<string> {
-  const frames = readdirSync(TEMP_DIR).filter(
+  const frames = readdirSync(workspace).filter(
     (f) => f.startsWith('frame_') && f.endsWith('.jpg')
   )
 
@@ -32,7 +34,7 @@ export async function createGrid(
 
   await run('ffmpeg', [
     '-i',
-    join(TEMP_DIR, 'frame_%03d.jpg'),
+    join(workspace, 'frame_%03d.jpg'),
     '-vf',
     `${scale},${crop},${tile}`,
     '-frames:v',

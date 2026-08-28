@@ -2,16 +2,17 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import type { Reporter, SceneFrame } from './types'
 import { run } from './run'
-import { TEMP_DIR } from './constants'
 
 /**
  * Extracts frames from video at uniform intervals
+ * @param workspace - Directory to write frames into
  * @param videoPath - Path to the video file
  * @param totalFrames - Number of frames to extract
  * @param duration - Video duration in seconds
  * @param report - Receives progress messages
  */
 export async function extractUniform(
+  workspace: string,
   videoPath: string,
   totalFrames: number,
   duration: number,
@@ -28,7 +29,7 @@ export async function extractUniform(
     `fps=1/${interval}`,
     '-frames:v',
     String(totalFrames),
-    join(TEMP_DIR, 'frame_%03d.jpg'),
+    join(workspace, 'frame_%03d.jpg'),
     '-y',
     '-loglevel',
     'warning',
@@ -37,6 +38,7 @@ export async function extractUniform(
 
 /**
  * Extracts frames from video based on scene detection
+ * @param workspace - Directory to write frames into
  * @param videoPath - Path to the video file
  * @param totalFrames - Number of frames to extract
  * @param threshold - Scene detection threshold (0-1)
@@ -44,6 +46,7 @@ export async function extractUniform(
  * @returns Whether scene detection was successful
  */
 export async function extractScenes(
+  workspace: string,
   videoPath: string,
   totalFrames: number,
   threshold: number,
@@ -51,7 +54,7 @@ export async function extractScenes(
 ): Promise<boolean> {
   report(`   장면 감지 중 (threshold: ${threshold})...`)
 
-  const sceneFile = join(TEMP_DIR, 'scenes.txt')
+  const sceneFile = join(workspace, 'scenes.txt')
 
   await run(
     'ffmpeg',
@@ -126,7 +129,7 @@ export async function extractScenes(
   await Promise.all(
     selectedTimes.map((time, i) => {
       const outFile = join(
-        TEMP_DIR,
+        workspace,
         `frame_${String(i + 1).padStart(3, '0')}.jpg`
       )
 
