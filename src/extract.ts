@@ -1,31 +1,38 @@
-import { exec, execSync } from 'child_process'
-import { promisify } from 'util'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import type { SceneFrame } from './types'
+import type { Reporter, SceneFrame } from './types'
+import { run } from './run'
 import { TEMP_DIR } from './constants'
-
-const execAsync = promisify(exec)
 
 /**
  * Extracts frames from video at uniform intervals
  * @param videoPath - Path to the video file
  * @param totalFrames - Number of frames to extract
  * @param duration - Video duration in seconds
+ * @param report - Receives progress messages
  */
-export function extractUniform(
+export async function extractUniform(
   videoPath: string,
   totalFrames: number,
-  duration: number
-): void {
+  duration: number,
+  report: Reporter
+): Promise<void> {
   const interval = Math.max(1, Math.floor(duration / totalFrames))
 
-  console.log(`   프레임 간격: ${interval}초`)
+  report(`   프레임 간격: ${interval}초`)
 
-  execSync(
-    `ffmpeg -i "${videoPath}" -vf "fps=1/${interval}" -frames:v ${totalFrames} "${TEMP_DIR}/frame_%03d.jpg" -y -loglevel warning`,
-    { stdio: 'inherit' }
-  )
+  await run('ffmpeg', [
+    '-i',
+    videoPath,
+    '-vf',
+    `fps=1/${interval}`,
+    '-frames:v',
+    String(totalFrames),
+    join(TEMP_DIR, 'frame_%03d.jpg'),
+    '-y',
+    '-loglevel',
+    'warning',
+  ])
 }
 
 /**
@@ -33,20 +40,33 @@ export function extractUniform(
  * @param videoPath - Path to the video file
  * @param totalFrames - Number of frames to extract
  * @param threshold - Scene detection threshold (0-1)
+ * @param report - Receives progress messages
  * @returns Whether scene detection was successful
  */
 export async function extractScenes(
   videoPath: string,
   totalFrames: number,
-  threshold: number
+  threshold: number,
+  report: Reporter
 ): Promise<boolean> {
-  console.log(`   장면 감지 중 (threshold: ${threshold})...`)
+  report(`   장면 감지 중 (threshold: ${threshold})...`)
 
   const sceneFile = join(TEMP_DIR, 'scenes.txt')
 
-  execSync(
-    `ffmpeg -i "${videoPath}" -vf "select='gte(scene,0)',metadata=print:file=${sceneFile}" -vsync vfr -f null - 2>/dev/null`,
-    { encoding: 'utf-8' }
+  await run(
+    'ffmpeg',
+    [
+      '-i',
+      videoPath,
+      '-vf',
+      `select='gte(scene,0)',metadata=print:file=${sceneFile}`,
+      '-vsync',
+      'vfr',
+      '-f',
+      'null',
+      '-',
+    ],
+    { silent: true }
   )
 
   const sceneData = readFileSync(sceneFile, 'utf-8')
@@ -79,11 +99,11 @@ export async function extractScenes(
     }
   }
 
-  console.log(`   ${scenes.length}개 장면 전환 감지됨`)
+  report(`   ${scenes.length}개 장면 전환 감지됨`)
 
   if (scenes.length === 0) {
-    console.log('   ⚠️  장면 전환 없음, threshold 낮춰보세요')
-    console.log('   → 균등 간격으로 대체합니다')
+    report('   ⚠️  장면 전환 없음, threshold 낮춰보세요')
+    report('   → 균등 간격으로 대체합니다')
     return false
   }
 
@@ -101,7 +121,7 @@ export async function extractScenes(
     }
   }
 
-  console.log(`   ${selectedTimes.length}개 프레임 병렬 추출 중...`)
+  report(`   ${selectedTimes.length}개 프레임 병렬 추출 중...`)
 
   await Promise.all(
     selectedTimes.map((time, i) => {
@@ -110,9 +130,20 @@ export async function extractScenes(
         `frame_${String(i + 1).padStart(3, '0')}.jpg`
       )
 
-      return execAsync(
-        `ffmpeg -ss ${time} -i "${videoPath}" -frames:v 1 "${outFile}" -y -loglevel warning`
-      )
+      return run('ffmpeg', [
+        '-ss',
+        String(time),
+        '-i',
+        videoPath,
+        '-frames:v',
+        '1',
+        outFile,
+        '-update',
+        '1',
+        '-y',
+        '-loglevel',
+        'warning',
+      ])
     })
   )
 
