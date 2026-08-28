@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outfile dist/index.js --target node --external sharp",
+    "build": "bun build src/index.ts --outfile dist/index.js --target node",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit"
   },
@@ -32,9 +32,6 @@
   },
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",

@@ -1,4 +1,4 @@
-import sharp from 'sharp'
+import { execSync } from 'child_process'
 import { readdirSync } from 'fs'
 import { join } from 'path'
 import { TEMP_DIR, THUMB_SIZE } from './constants'
@@ -9,42 +9,27 @@ import { TEMP_DIR, THUMB_SIZE } from './constants'
  * @param outputName - Output file path
  * @returns Output file path
  */
-export async function createGrid(
-  grid: number,
-  outputName: string
-): Promise<string> {
-  const frames = readdirSync(TEMP_DIR)
-    .filter((f) => f.startsWith('frame_') && f.endsWith('.jpg'))
-    .sort()
-    .slice(0, grid * grid)
+export function createGrid(grid: number, outputName: string): string {
+  const frames = readdirSync(TEMP_DIR).filter(
+    (f) => f.startsWith('frame_') && f.endsWith('.jpg')
+  )
 
-  console.log(`📷 ${frames.length}개 프레임으로 그리드 생성`)
+  console.log(
+    `📷 ${Math.min(frames.length, grid * grid)}개 프레임으로 그리드 생성`
+  )
 
   if (frames.length === 0) {
     throw new Error('프레임 추출 실패')
   }
 
-  const composites = await Promise.all(
-    frames.map(async (f, i) => ({
-      input: await sharp(join(TEMP_DIR, f))
-        .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'cover' })
-        .toBuffer(),
-      left: (i % grid) * THUMB_SIZE,
-      top: Math.floor(i / grid) * THUMB_SIZE,
-    }))
-  )
+  const scale = `scale=${THUMB_SIZE}:${THUMB_SIZE}:force_original_aspect_ratio=increase`
+  const crop = `crop=${THUMB_SIZE}:${THUMB_SIZE}`
+  const tile = `tile=${grid}x${grid}:color=black`
 
-  await sharp({
-    create: {
-      width: THUMB_SIZE * grid,
-      height: THUMB_SIZE * grid,
-      channels: 3,
-      background: { r: 0, g: 0, b: 0 },
-    },
-  })
-    .composite(composites)
-    .jpeg({ quality: 90 })
-    .toFile(outputName)
+  execSync(
+    `ffmpeg -i "${join(TEMP_DIR, 'frame_%03d.jpg')}" -vf "${scale},${crop},${tile}" -frames:v 1 -update 1 -q:v 2 "${outputName}" -y -loglevel warning`,
+    { stdio: 'inherit' }
+  )
 
   return outputName
 }
