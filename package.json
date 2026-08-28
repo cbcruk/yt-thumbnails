@@ -14,7 +14,9 @@
     "start": "bun run src/index.ts",
     "build": "bun build src/index.ts --outfile dist/index.js --target node",
     "prepublishOnly": "npm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "gui": "bun run src/gui/main.ts",
+    "gui:build": "bun build src/gui/main.ts --compile --outfile build/yt-thumbnails-gui"
   },
   "keywords": [
     "youtube",
@@ -35,6 +37,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "barlo": "github:cbcruk/barlo",
     "bun-types": "^1.3.5",
     "typescript": "^5.9.3"
   }
