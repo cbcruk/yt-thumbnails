@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { existsSync } from 'fs'
 import { join } from 'path'
 import { parseArgs, printUsage } from './args'
 import { extractUniform, extractScenes } from './extract'
@@ -37,7 +38,19 @@ async function main(): Promise<void> {
 
     const videoPath = join(workspace, 'video.mp4')
 
-    await run('yt-dlp', ['-f', 'best[height<=720]', '-o', videoPath, opts.url])
+    await run('yt-dlp', [
+      '-f',
+      'bv*[height<=720]+ba/b[height<=720]/b',
+      '--merge-output-format',
+      'mp4',
+      '-o',
+      videoPath,
+      opts.url,
+    ])
+
+    if (!existsSync(videoPath)) {
+      throw new Error(`영상 다운로드 실패: ${videoPath}`)
+    }
 
     report(`🎞️  프레임 추출 중 (${opts.mode} 모드)...`)
 
