@@ -70,7 +70,7 @@ async function main(): Promise<void> {
 
     console.log('🔲 그리드 생성 중...')
 
-    await createGrid(opts.grid, outputName)
+    createGrid(opts.grid, outputName)
 
     console.log(`✅ 완료: ${outputName}`)
   } finally {
