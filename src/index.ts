@@ -1,11 +1,10 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, rmSync } from 'fs'
 import { join } from 'path'
 import { parseArgs, printUsage } from './args'
-import { TEMP_DIR } from './constants'
 import { extractUniform, extractScenes } from './extract'
 import { createGrid } from './grid'
 import { run } from './run'
+import { createWorkspace, removeWorkspace } from './workspace'
 import type { Reporter } from './types'
 
 async function main(): Promise<void> {
@@ -21,14 +20,7 @@ async function main(): Promise<void> {
   const modeLabel = opts.mode === 'scene' ? 'scene' : 'uniform'
   const defaultName = `grid_${opts.grid}x${opts.grid}_${modeLabel}.jpg`
   const outputName = opts.output ?? defaultName
-
-  if (existsSync(TEMP_DIR)) {
-    rmSync(TEMP_DIR, {
-      recursive: true,
-    })
-  }
-
-  mkdirSync(TEMP_DIR)
+  const workspace = createWorkspace()
 
   try {
     report('📹 영상 정보 가져오는 중...')
@@ -43,20 +35,15 @@ async function main(): Promise<void> {
 
     report('⬇️  영상 다운로드 중...')
 
-    const videoPath = join(TEMP_DIR, 'video.mp4')
+    const videoPath = join(workspace, 'video.mp4')
 
-    await run('yt-dlp', [
-      '-f',
-      'best[height<=720]',
-      '-o',
-      videoPath,
-      opts.url,
-    ])
+    await run('yt-dlp', ['-f', 'best[height<=720]', '-o', videoPath, opts.url])
 
     report(`🎞️  프레임 추출 중 (${opts.mode} 모드)...`)
 
     if (opts.mode === 'scene') {
       const success = await extractScenes(
+        workspace,
         videoPath,
         totalFrames,
         opts.threshold,
@@ -64,21 +51,25 @@ async function main(): Promise<void> {
       )
 
       if (!success) {
-        await extractUniform(videoPath, totalFrames, duration, report)
+        await extractUniform(
+          workspace,
+          videoPath,
+          totalFrames,
+          duration,
+          report
+        )
       }
     } else {
-      await extractUniform(videoPath, totalFrames, duration, report)
+      await extractUniform(workspace, videoPath, totalFrames, duration, report)
     }
 
     report('🔲 그리드 생성 중...')
 
-    await createGrid(opts.grid, outputName, report)
+    await createGrid(workspace, opts.grid, outputName, report)
 
     report(`✅ 완료: ${outputName}`)
   } finally {
-    if (existsSync(TEMP_DIR)) {
-      rmSync(TEMP_DIR, { recursive: true })
-    }
+    removeWorkspace(workspace)
   }
 }
 
