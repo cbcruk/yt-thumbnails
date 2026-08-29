@@ -1,11 +1,12 @@
 import { spawn } from 'child_process'
+import { CancelledError } from './errors'
 import type { RunOptions } from './types'
 
 /**
  * Runs a command to completion without blocking the event loop
  * @param command - Executable name
  * @param args - Arguments, passed without shell interpretation
- * @param options - Output handling
+ * @param options - Output handling and cancellation
  * @returns Collected stdout when capturing, otherwise an empty string
  */
 export function run(
@@ -13,15 +14,32 @@ export function run(
   args: string[],
   options: RunOptions = {}
 ): Promise<string> {
-  const { capture = false, onOutput, silent = false } = options
+  const { capture = false, onOutput, silent = false, signal } = options
   const forward = !capture && !onOutput && !silent
   const stream = silent ? 'ignore' : forward ? 'inherit' : 'pipe'
 
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new CancelledError())
+      return
+    }
+
     const child = spawn(command, args, { stdio: ['ignore', stream, stream] })
 
     let output = ''
     let errorOutput = ''
+    let cancelled = false
+
+    const abort = (): void => {
+      cancelled = true
+      child.kill('SIGTERM')
+    }
+
+    signal?.addEventListener('abort', abort, { once: true })
+
+    const settle = (): void => {
+      signal?.removeEventListener('abort', abort)
+    }
 
     child.stdout?.setEncoding('utf-8')
     child.stdout?.on('data', (chunk: string) => {
@@ -38,9 +56,19 @@ export function run(
       onOutput?.(chunk)
     })
 
-    child.on('error', reject)
+    child.on('error', (error) => {
+      settle()
+      reject(cancelled ? new CancelledError() : error)
+    })
 
     child.on('close', (code) => {
+      settle()
+
+      if (cancelled) {
+        reject(new CancelledError())
+        return
+      }
+
       if (code === 0) {
         resolve(output.trim())
         return

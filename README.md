@@ -29,8 +29,11 @@ yt-thumbnails "<youtube-url>"
 
 A desktop front end built with [barlo](https://github.com/cbcruk/barlo), which
 runs the page in the Chrome already installed on the machine. It shares the
-extraction pipeline with the CLI, streams progress into the window, and writes
-the grid to your Downloads folder.
+extraction pipeline with the CLI.
+
+Queue several videos and it works through them two at a time, showing each
+job's progress and letting you cancel one mid-download. Finished grids go to
+your Downloads folder, named after the video.
 
 Requires [Bun](https://bun.sh) and Chrome, Chromium, Edge, or Brave — it is not
 part of the npm package.

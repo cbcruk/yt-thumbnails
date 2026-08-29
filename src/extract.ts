@@ -10,13 +10,15 @@ import { run } from './run'
  * @param totalFrames - Number of frames to extract
  * @param duration - Video duration in seconds
  * @param report - Receives progress messages
+ * @param signal - Stops extraction when aborted
  */
 export async function extractUniform(
   workspace: string,
   videoPath: string,
   totalFrames: number,
   duration: number,
-  report: Reporter
+  report: Reporter,
+  signal?: AbortSignal
 ): Promise<void> {
   const interval = Math.max(1, Math.floor(duration / totalFrames))
 
@@ -33,7 +35,7 @@ export async function extractUniform(
     '-y',
     '-loglevel',
     'warning',
-  ])
+  ], { signal })
 }
 
 /**
@@ -43,6 +45,7 @@ export async function extractUniform(
  * @param totalFrames - Number of frames to extract
  * @param threshold - Scene detection threshold (0-1)
  * @param report - Receives progress messages
+ * @param signal - Stops extraction when aborted
  * @returns Whether scene detection was successful
  */
 export async function extractScenes(
@@ -50,7 +53,8 @@ export async function extractScenes(
   videoPath: string,
   totalFrames: number,
   threshold: number,
-  report: Reporter
+  report: Reporter,
+  signal?: AbortSignal
 ): Promise<boolean> {
   report(`   장면 감지 중 (threshold: ${threshold})...`)
 
@@ -69,7 +73,7 @@ export async function extractScenes(
       'null',
       '-',
     ],
-    { silent: true }
+    { silent: true, signal }
   )
 
   const sceneData = readFileSync(sceneFile, 'utf-8')
@@ -146,7 +150,7 @@ export async function extractScenes(
         '-y',
         '-loglevel',
         'warning',
-      ])
+      ], { signal })
     })
   )
 

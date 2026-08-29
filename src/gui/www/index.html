@@ -9,10 +9,11 @@
     --muted: #6b7280;
     --line: #e5e7eb;
     --field: #ffffff;
+    --card: #fbfbfc;
     --accent: #2563eb;
     --accent-fg: #ffffff;
-    --log-bg: #f6f7f9;
     --danger: #b91c1c;
+    --ok: #15803d;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -22,10 +23,11 @@
       --muted: #9aa1ab;
       --line: #2c3038;
       --field: #1e2127;
+      --card: #1b1e24;
       --accent: #3b82f6;
       --accent-fg: #ffffff;
-      --log-bg: #12141a;
       --danger: #f87171;
+      --ok: #4ade80;
     }
   }
 
@@ -57,8 +59,7 @@
     font-weight: 500;
   }
 
-  input[type='text'],
-  input[type='number'],
+  input,
   select {
     width: 100%;
     padding: 9px 11px;
@@ -78,13 +79,14 @@
 
   .row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr) auto;
     gap: 12px;
+    align-items: end;
     margin-top: 12px;
   }
 
   button {
-    padding: 10px 18px;
+    padding: 9px 18px;
     border: 0;
     border-radius: 7px;
     background: var(--accent);
@@ -92,73 +94,121 @@
     font: inherit;
     font-weight: 550;
     cursor: pointer;
+    white-space: nowrap;
   }
 
   button.secondary {
+    padding: 5px 10px;
     background: transparent;
     border: 1px solid var(--line);
     color: var(--fg);
+    font-size: 12px;
+    font-weight: 500;
   }
 
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .actions {
+  .queue-head {
     display: flex;
-    gap: 8px;
-    margin-top: 16px;
-    align-items: center;
+    justify-content: space-between;
+    align-items: baseline;
+    margin: 28px 0 10px;
   }
 
-  #status {
+  .queue-head h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--muted);
+  }
+
+  #empty {
+    padding: 32px 0;
+    color: var(--muted);
+    text-align: center;
     font-size: 13px;
   }
 
-  #status.error {
-    color: var(--danger);
-  }
-
-  #log {
-    margin-top: 16px;
-    padding: 12px;
-    max-height: 180px;
-    overflow: auto;
-    border-radius: 7px;
-    background: var(--log-bg);
-    color: var(--muted);
-    font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-
-  #log:empty {
-    display: none;
-  }
-
-  #result {
-    margin-top: 20px;
-  }
-
-  #result:not([hidden]) {
-    display: block;
-  }
-
-  #result img {
-    display: block;
-    max-width: 100%;
-    height: auto;
-    border-radius: 7px;
+  .job {
+    display: grid;
+    grid-template-columns: 96px 1fr auto;
+    gap: 14px;
+    align-items: start;
+    padding: 14px;
+    margin-bottom: 10px;
     border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--card);
   }
 
-  #path {
-    margin-top: 8px;
+  .job .thumb {
+    width: 96px;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    object-fit: cover;
+    background: var(--field);
+  }
+
+  .job .thumb.placeholder {
+    display: grid;
+    place-items: center;
     color: var(--muted);
     font-size: 11px;
-    word-break: break-all;
+  }
+
+  .job .title {
+    font-weight: 550;
+    overflow-wrap: anywhere;
+  }
+
+  .job .sub,
+  .job .detail {
+    margin-top: 3px;
+    color: var(--muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .job .detail {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+  }
+
+  .job .error {
+    margin-top: 4px;
+    color: var(--danger);
+    font-size: 12px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 11px;
+    font-weight: 550;
+  }
+
+  .badge.done {
+    color: var(--ok);
+    border-color: currentColor;
+  }
+
+  .badge.failed {
+    color: var(--danger);
+    border-color: currentColor;
+  }
+
+  .badge.running {
+    color: var(--accent);
+    border-color: currentColor;
+  }
+
+  .job .actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 </style>
 
@@ -194,74 +244,142 @@
       <label for="threshold">threshold</label>
       <input id="threshold" type="number" min="0" max="1" step="0.05" value="0.4" />
     </div>
-  </div>
-
-  <div class="actions">
-    <button id="submit" type="submit">생성</button>
-    <button id="revealBtn" class="secondary" type="button" hidden>
-      폴더 열기
-    </button>
-    <span id="status"></span>
+    <button type="submit">추가</button>
   </div>
 </form>
 
-<div id="log"></div>
-
-<div id="result" hidden>
-  <img id="image" alt="생성된 썸네일 그리드" />
-  <div id="path"></div>
+<div class="queue-head">
+  <h2>작업 큐</h2>
+  <button id="clear" class="secondary" type="button" hidden>
+    완료 항목 지우기
+  </button>
 </div>
+
+<div id="empty">아직 추가된 작업이 없습니다</div>
+<div id="jobs"></div>
 
 <script type="module">
   const form = document.getElementById('form')
-  const submit = document.getElementById('submit')
-  const revealBtn = document.getElementById('revealBtn')
-  const status = document.getElementById('status')
-  const log = document.getElementById('log')
-  const result = document.getElementById('result')
-  const image = document.getElementById('image')
-  const path = document.getElementById('path')
+  const jobsEl = document.getElementById('jobs')
+  const emptyEl = document.getElementById('empty')
+  const clearBtn = document.getElementById('clear')
 
-  window.__onProgress = (chunk) => {
-    log.textContent += chunk
-    log.scrollTop = log.scrollHeight
+  const LABEL = {
+    queued: '대기',
+    running: '진행 중',
+    done: '완료',
+    failed: '실패',
+    cancelled: '취소됨',
   }
 
-  const setBusy = (busy) => {
-    submit.disabled = busy
-    submit.textContent = busy ? '생성 중…' : '생성'
+  const stamps = new Map()
+
+  const render = (jobs) => {
+    emptyEl.hidden = jobs.length > 0
+    clearBtn.hidden = !jobs.some((job) => job.status !== 'queued' && job.status !== 'running')
+
+    jobsEl.replaceChildren(
+      ...jobs.map((job) => {
+        const row = document.createElement('div')
+        row.className = 'job'
+
+        if (job.status === 'done') {
+          if (!stamps.has(job.id)) {
+            stamps.set(job.id, Date.now())
+          }
+
+          const img = document.createElement('img')
+          img.className = 'thumb'
+          img.alt = ''
+          img.src = `/result.jpg?id=${job.id}&t=${stamps.get(job.id)}`
+          row.append(img)
+        } else {
+          const box = document.createElement('div')
+          box.className = 'thumb placeholder'
+          box.textContent = `${job.grid}×${job.grid}`
+          row.append(box)
+        }
+
+        const body = document.createElement('div')
+
+        const title = document.createElement('div')
+        title.className = 'title'
+        title.textContent = job.title || job.url
+        body.append(title)
+
+        const sub = document.createElement('div')
+        sub.className = 'sub'
+        const badge = document.createElement('span')
+        badge.className = `badge ${job.status}`
+        badge.textContent = LABEL[job.status]
+        sub.append(badge)
+
+        if (job.message && job.message !== LABEL[job.status]) {
+          sub.append(` ${job.message}`)
+        }
+        body.append(sub)
+
+        if (job.detail) {
+          const detail = document.createElement('div')
+          detail.className = 'detail'
+          detail.textContent = job.detail
+          body.append(detail)
+        }
+
+        if (job.error) {
+          const error = document.createElement('div')
+          error.className = 'error'
+          error.textContent = job.error
+          body.append(error)
+        }
+
+        row.append(body)
+
+        const actions = document.createElement('div')
+        actions.className = 'actions'
+
+        if (job.status === 'queued' || job.status === 'running') {
+          const cancel = document.createElement('button')
+          cancel.className = 'secondary'
+          cancel.type = 'button'
+          cancel.textContent = '취소'
+          cancel.addEventListener('click', () => window.__cancel(job.id))
+          actions.append(cancel)
+        }
+
+        if (job.status === 'done') {
+          const open = document.createElement('button')
+          open.className = 'secondary'
+          open.type = 'button'
+          open.textContent = '폴더 열기'
+          open.addEventListener('click', () => window.__reveal(job.id))
+          actions.append(open)
+        }
+
+        row.append(actions)
+
+        return row
+      })
+    )
   }
 
-  form.addEventListener('submit', async (event) => {
+  window.__onJobs = render
+
+  form.addEventListener('submit', (event) => {
     event.preventDefault()
 
-    log.textContent = ''
-    status.textContent = ''
-    status.classList.remove('error')
-    result.hidden = true
-    revealBtn.hidden = true
-    setBusy(true)
+    const url = document.getElementById('url')
 
-    try {
-      const output = await window.__generate({
-        url: document.getElementById('url').value.trim(),
-        grid: Number(document.getElementById('grid').value),
-        mode: document.getElementById('mode').value,
-        threshold: Number(document.getElementById('threshold').value),
-      })
+    window.__enqueue({
+      url: url.value.trim(),
+      grid: Number(document.getElementById('grid').value),
+      mode: document.getElementById('mode').value,
+      threshold: Number(document.getElementById('threshold').value),
+    })
 
-      image.src = `/result.jpg?t=${Date.now()}`
-      path.textContent = output
-      result.hidden = false
-      revealBtn.hidden = false
-      status.textContent = '완료'
-    } catch (error) {
-      status.textContent = error.message
-      status.classList.add('error')
-    } finally {
-      setBusy(false)
-    }
+    url.value = ''
+    url.focus()
   })
 
-  revealBtn.addEventListener('click', () => window.__reveal())
+  clearBtn.addEventListener('click', () => window.__clearFinished())
 </script>

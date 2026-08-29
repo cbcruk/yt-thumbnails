@@ -1,23 +1,21 @@
 import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
 import { launch, type App } from 'barlo'
-import { generate } from '../pipeline'
-import type { GenerateOptions } from '../types'
 import type { AppWindow } from './gui.types'
-import { outputDir, reveal } from './gui.utils'
+import { reveal } from './gui.utils'
+import { JobQueue, type JobRequest } from './queue'
 import indexHtmlBundle from './www/index.html' with { type: 'text' }
 
 const indexHtml = indexHtmlBundle as unknown as string
-const FLUSH_INTERVAL = 100
+const PUSH_INTERVAL = 150
 
 /**
- * Opens the application window and wires the page to the pipeline
+ * Opens the application window and wires the page to the job queue
  * @returns The running application
  */
 export async function startGui(): Promise<App> {
   const launched = await launch({
     title: 'yt-thumbnails',
-    width: 720,
+    width: 780,
     height: 900,
   })
 
@@ -27,19 +25,42 @@ export async function startGui(): Promise<App> {
 
   const app = launched.unwrap()
 
-  let resultPath: string | null = null
-  let running = false
+  let scheduled: ReturnType<typeof setTimeout> | null = null
+
+  const push = (): void => {
+    scheduled = null
+
+    app.evaluate(
+      (jobs: string) =>
+        (window as never as AppWindow).__onJobs(JSON.parse(jobs)),
+      JSON.stringify(queue.view())
+    )
+  }
+
+  const schedulePush = (): void => {
+    if (!scheduled) {
+      scheduled = setTimeout(push, PUSH_INTERVAL)
+    }
+  }
+
+  const queue = new JobQueue(schedulePush)
 
   app.serveEmbedded({ 'index.html': indexHtml })
 
   app.serveHandler((request) => {
-    const { pathname } = new URL(request.url)
+    const { pathname, searchParams } = new URL(request.url)
 
-    if (pathname !== '/result.jpg' || !resultPath || !existsSync(resultPath)) {
+    if (pathname !== '/result.jpg') {
       return undefined
     }
 
-    return new Response(readFileSync(resultPath), {
+    const output = queue.outputOf(searchParams.get('id') ?? '')
+
+    if (!output || !existsSync(output)) {
+      return undefined
+    }
+
+    return new Response(readFileSync(output), {
       headers: {
         'content-type': 'image/jpeg',
         'cache-control': 'no-store',
@@ -47,69 +68,21 @@ export async function startGui(): Promise<App> {
     })
   })
 
-  await app.exposeFunction(
-    '__generate',
-    async (request: Omit<GenerateOptions, 'output'>): Promise<string> => {
-      if (running) {
-        throw new Error('이미 생성 중입니다')
-      }
-
-      running = true
-
-      let pending: string[] = []
-      let scheduled: ReturnType<typeof setTimeout> | null = null
-
-      const flush = (): void => {
-        scheduled = null
-
-        if (pending.length === 0) {
-          return
-        }
-
-        const chunk = pending.join('')
-
-        pending = []
-
-        app.evaluate(
-          (text: string) => (window as never as AppWindow).__onProgress(text),
-          chunk
-        )
-      }
-
-      const push = (chunk: string): void => {
-        pending.push(chunk)
-
-        if (!scheduled) {
-          scheduled = setTimeout(flush, FLUSH_INTERVAL)
-        }
-      }
-
-      try {
-        const modeLabel = request.mode === 'scene' ? 'scene' : 'uniform'
-        const name = `grid_${request.grid}x${request.grid}_${modeLabel}.jpg`
-
-        resultPath = await generate(
-          { ...request, output: join(outputDir(), name) },
-          (message) => push(`${message}\n`),
-          push
-        )
-
-        return resultPath
-      } finally {
-        running = false
-
-        if (scheduled) {
-          clearTimeout(scheduled)
-        }
-
-        flush()
-      }
-    }
+  await app.exposeFunction('__enqueue', (request: JobRequest): string =>
+    queue.add(request)
   )
 
-  await app.exposeFunction('__reveal', (): void => {
-    if (resultPath) {
-      reveal(resultPath)
+  await app.exposeFunction('__cancel', (id: string): void => queue.cancel(id))
+
+  await app.exposeFunction('__clearFinished', (): void =>
+    queue.clearFinished()
+  )
+
+  await app.exposeFunction('__reveal', (id: string): void => {
+    const output = queue.outputOf(id)
+
+    if (output) {
+      reveal(output)
     }
   })
 
