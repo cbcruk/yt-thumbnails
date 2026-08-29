@@ -10,13 +10,15 @@ import { THUMB_SIZE } from './constants'
  * @param grid - Grid size (e.g., 4 for 4x4)
  * @param outputName - Output file path
  * @param report - Receives progress messages
+ * @param signal - Stops rendering when aborted
  * @returns Output file path
  */
 export async function createGrid(
   workspace: string,
   grid: number,
   outputName: string,
-  report: Reporter
+  report: Reporter,
+  signal?: AbortSignal
 ): Promise<string> {
   const frames = readdirSync(workspace).filter(
     (f) => f.startsWith('frame_') && f.endsWith('.jpg')
@@ -47,7 +49,7 @@ export async function createGrid(
     '-y',
     '-loglevel',
     'warning',
-  ])
+  ], { signal })
 
   return outputName
 }

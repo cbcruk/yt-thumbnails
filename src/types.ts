@@ -31,6 +31,8 @@ export interface RunOptions {
   onOutput?: (chunk: string) => void
   /** Discard all output */
   silent?: boolean
+  /** Kills the command when aborted */
+  signal?: AbortSignal
 }
 
 /** Resolved settings for one grid generation */
@@ -45,4 +47,14 @@ export interface GenerateOptions {
   threshold: number
   /** Output file path */
   output: string
+  /** Known duration in seconds, skipping the metadata lookup */
+  duration?: number
+}
+
+/** What yt-dlp reports about a video before downloading it */
+export interface VideoMetadata {
+  /** Video title */
+  title: string
+  /** Duration in seconds */
+  duration: number
 }
